@@ -7,19 +7,14 @@ const authRoutes = require("./routes/auth");
 dotenv.config();
 const app = express();
 
-// ✅ CORS config (important!)
-app.use(cors({
-  origin: "*", // Allow all origins for now
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
+app.use(cors());
 
 app.use(express.json());
 app.get("/", (req, res) => {
     res.send("Server is working!");
   });
   
-// ✅ API routes
+
 app.use("/api/auth", authRoutes);
 
 mongoose
