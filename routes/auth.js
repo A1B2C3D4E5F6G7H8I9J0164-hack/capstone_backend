@@ -53,30 +53,45 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Google OAuth Routes
-router.get(
-  "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+// Google OAuth Routes - only register if OAuth is configured
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  router.get(
+    "/google",
+    passport.authenticate("google", { scope: ["profile", "email"] })
+  );
 
-router.get(
-  "/google/callback",
-  passport.authenticate("google", { session: false, failureRedirect: "/login" }),
-  async (req, res) => {
-    try {
-      // Generate JWT token for the authenticated user
-      const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, {
-        expiresIn: "1h",
-      });
+  router.get(
+    "/google/callback",
+    passport.authenticate("google", { session: false, failureRedirect: "/login" }),
+    async (req, res) => {
+      try {
+        // Generate JWT token for the authenticated user
+        const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, {
+          expiresIn: "1h",
+        });
 
-      // Redirect to frontend with token
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      res.redirect(`${frontendUrl}/Login?token=${token}&success=true`);
-    } catch (err) {
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      res.redirect(`${frontendUrl}/Login?error=oauth_failed`);
+        // Redirect to frontend with token
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        res.redirect(`${frontendUrl}/Login?token=${token}&success=true`);
+      } catch (err) {
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        res.redirect(`${frontendUrl}/Login?error=oauth_failed`);
+      }
     }
-  }
-);
+  );
+} else {
+  // Return error if OAuth routes are accessed but not configured
+  router.get("/google", (req, res) => {
+    res.status(503).json({ 
+      message: "Google OAuth is not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables." 
+    });
+  });
+
+  router.get("/google/callback", (req, res) => {
+    res.status(503).json({ 
+      message: "Google OAuth is not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables." 
+    });
+  });
+}
 
 module.exports = router;
