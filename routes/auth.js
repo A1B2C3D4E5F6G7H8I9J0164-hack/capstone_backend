@@ -32,7 +32,7 @@ router.post("/login", async (req, res) => {
     if (!user)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    // Check if user has a password (not OAuth-only user)
+
     if (!user.password)
       return res.status(400).json({ message: "Please use Google to sign in" });
 
@@ -53,7 +53,32 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Google OAuth Routes - only register if OAuth is configured
+// Get current authenticated user
+router.get("/me", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "Invalid authorization header" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select("name email");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ user });
+  } catch (err) {
+    console.error("Error in /me:", err.message);
+    return res.status(401).json({ message: "Invalid or expired token" });
+  }
+});
+
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   router.get(
     "/google",
@@ -65,12 +90,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     passport.authenticate("google", { session: false, failureRedirect: "/login" }),
     async (req, res) => {
       try {
-        // Generate JWT token for the authenticated user
         const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, {
           expiresIn: "1h",
         });
 
-        // Redirect to frontend with token
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
         res.redirect(`${frontendUrl}/Login?token=${token}&success=true`);
       } catch (err) {
@@ -80,7 +103,6 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     }
   );
 } else {
-  // Return error if OAuth routes are accessed but not configured
   router.get("/google", (req, res) => {
     res.status(503).json({ 
       message: "Google OAuth is not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables." 

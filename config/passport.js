@@ -11,19 +11,37 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        const googleEmail = profile.emails[0]?.value;
+        if (!googleEmail) {
+          return done(new Error("No email found in Google profile"), null);
+        }
+
         let user = await User.findOne({
           $or: [
-            { email: profile.emails[0].value },
+            { email: googleEmail },
             { googleId: profile.id }
           ]
         });
 
         if (!user) {
+          // Create new user with Google email
           user = await User.create({
             name: profile.displayName,
-            email: profile.emails[0].value,
+            email: googleEmail,
             googleId: profile.id
           });
+        } else {
+          // Update existing user to ensure email and googleId are current
+          if (user.email !== googleEmail) {
+            user.email = googleEmail;
+          }
+          if (!user.googleId) {
+            user.googleId = profile.id;
+          }
+          if (user.name !== profile.displayName) {
+            user.name = profile.displayName;
+          }
+          await user.save();
         }
 
         return done(null, user);
