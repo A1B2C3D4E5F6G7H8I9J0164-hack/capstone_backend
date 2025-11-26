@@ -291,7 +291,7 @@ exports.createSchedule = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const { title, time, detail, date } = req.body;
+    const { title, time, detail, date, taskId } = req.body;
     if (!title) {
       return res.status(400).json({ message: "Title is required" });
     }
@@ -302,6 +302,7 @@ exports.createSchedule = async (req, res) => {
       time: time || "Custom",
       detail: detail || "Tap to edit details",
       date: date ? new Date(date) : new Date(),
+      taskId: taskId || null,
     });
 
     await schedule.save();
@@ -319,7 +320,7 @@ exports.updateSchedule = async (req, res) => {
     }
 
     const { id } = req.params;
-    const { title, time, detail, date } = req.body;
+    const { title, time, detail, date, taskId } = req.body;
 
     const schedule = await Schedule.findOne({ _id: id, userId });
     if (!schedule) {
@@ -330,6 +331,7 @@ exports.updateSchedule = async (req, res) => {
     if (time) schedule.time = time;
     if (detail !== undefined) schedule.detail = detail;
     if (date) schedule.date = new Date(date);
+    if (taskId !== undefined) schedule.taskId = taskId;
 
     await schedule.save();
     res.json(schedule);
@@ -394,8 +396,8 @@ exports.getPendingTasksToday = async (req, res) => {
     }
 
     const today = new Date();
-    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
     const pendingTasks = await Task.find({
       userId,
