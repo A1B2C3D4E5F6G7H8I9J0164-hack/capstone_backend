@@ -16,7 +16,7 @@
   - Overview (get, create, update, delete)
   - Schedules (get, create, update, delete)
   - Tasks (get, create, update, delete, get pending today, get by week)
-- ✅ `controllers/aiController.js` - AI summarization using OpenAI
+- ✅ `controllers/aiController.js` - AI summarization using Google Gemini
 
 ### New Routes
 - ✅ `routes/dashboard.js` - All dashboard API endpoints
@@ -75,7 +75,7 @@ GEMINI_API_KEY=your_gemini_api_key (required for AI summarization feature)
 - DELETE `/api/dashboard/tasks/:id` - Delete task
 
 ### AI
-- POST `/api/ai/summarize` - Generate AI summary from notes (requires OPENAI_API_KEY)
+- POST `/api/ai/summarize` - Generate AI summary from notes (requires GEMINI_API_KEY)
 
 ## Deployment Steps
 
