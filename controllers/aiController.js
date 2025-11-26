@@ -48,9 +48,9 @@ exports.summarizeNotes = async (req, res) => {
       });
     }
 
-    // Get the Gemini model - use gemini-pro (most stable and widely available)
-    // Alternative models: gemini-1.0-pro, gemini-1.5-pro
-    const modelName = process.env.GEMINI_MODEL || "gemini-pro";
+    // Get the Gemini model - updated default to a supported model
+    // You can override via GEMINI_MODEL env var
+    const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
     
     console.log("Using Gemini model:", modelName);
     const model = genAI.getGenerativeModel({ model: modelName });
