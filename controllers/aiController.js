@@ -47,8 +47,11 @@ exports.summarizeNotes = async (req, res) => {
       });
     }
 
-    // Get the Gemini model - use gemini-1.5-flash (faster) or gemini-1.5-pro (better quality)
-    const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+    // Get the Gemini model - use gemini-pro (most stable and widely available)
+    // Alternative models: gemini-1.0-pro, gemini-1.5-pro
+    const modelName = process.env.GEMINI_MODEL || "gemini-pro";
+    
+    console.log("Using Gemini model:", modelName);
     const model = genAI.getGenerativeModel({ model: modelName });
 
     // Create the prompt with clear instructions
