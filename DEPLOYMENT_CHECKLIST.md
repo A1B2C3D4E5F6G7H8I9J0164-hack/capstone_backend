@@ -15,10 +15,12 @@
   - Milestones (get, create, update, delete)
   - Overview (get, create, update, delete)
   - Schedules (get, create, update, delete)
-  - Tasks (get, create, update, delete, get pending today)
+  - Tasks (get, create, update, delete, get pending today, get by week)
+- ✅ `controllers/aiController.js` - AI summarization using OpenAI
 
 ### New Routes
 - ✅ `routes/dashboard.js` - All dashboard API endpoints
+- ✅ `routes/ai.js` - AI summarization endpoint
 
 ### Updated Files
 - ✅ `index.js` - Added dashboard routes and improved CORS configuration
@@ -37,6 +39,7 @@ GOOGLE_REDIRECT_URL=your_google_redirect_url
 FRONTEND_URL=your_frontend_url (comma-separated for multiple)
 PORT=5001 (or your preferred port)
 SESSION_SECRET=your_session_secret (optional, defaults to JWT_SECRET)
+OPENAI_API_KEY=your_openai_api_key (required for AI summarization feature)
 ```
 
 ## API Endpoints Available
@@ -66,9 +69,13 @@ SESSION_SECRET=your_session_secret (optional, defaults to JWT_SECRET)
 ### Tasks
 - GET `/api/dashboard/tasks` - Get all tasks (with optional query params: status, dueDate)
 - GET `/api/dashboard/tasks/pending-today` - Get pending tasks for today
+- GET `/api/dashboard/tasks/week` - Get tasks grouped by day for the last 7 days
 - POST `/api/dashboard/tasks` - Create task
 - PUT `/api/dashboard/tasks/:id` - Update task
 - DELETE `/api/dashboard/tasks/:id` - Delete task
+
+### AI
+- POST `/api/ai/summarize` - Generate AI summary from notes (requires OPENAI_API_KEY)
 
 ## Deployment Steps
 

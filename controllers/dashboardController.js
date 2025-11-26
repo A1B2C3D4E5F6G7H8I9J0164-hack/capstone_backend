@@ -388,6 +388,80 @@ exports.getTasks = async (req, res) => {
   }
 };
 
+exports.getTasksByWeek = async (req, res) => {
+  try {
+    const userId = getUserFromToken(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Get tasks from the last 7 days
+    const today = new Date();
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const tasks = await Task.find({
+      userId,
+      dueDate: { $gte: sevenDaysAgo },
+    }).sort({ dueDate: 1 });
+
+    // Group tasks by date
+    const tasksByDate = {};
+    tasks.forEach((task) => {
+      const taskDate = new Date(task.dueDate);
+      const dateKey = taskDate.toDateString();
+      
+      if (!tasksByDate[dateKey]) {
+        tasksByDate[dateKey] = {
+          date: dateKey,
+          total: 0,
+          completed: 0,
+          pending: 0,
+        };
+      }
+      
+      tasksByDate[dateKey].total++;
+      if (task.status === "completed") {
+        tasksByDate[dateKey].completed++;
+      } else {
+        tasksByDate[dateKey].pending++;
+      }
+    });
+
+    // Get last 7 days with their data
+    const weekData = [];
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      
+      const dateKey = date.toDateString();
+      const dayData = tasksByDate[dateKey] || {
+        date: dateKey,
+        total: 0,
+        completed: 0,
+        pending: 0,
+      };
+      
+      weekData.push({
+        day: dayNames[date.getDay()],
+        date: dateKey,
+        total: dayData.total,
+        completed: dayData.completed,
+        pending: dayData.pending,
+        dateObj: date,
+      });
+    }
+
+    res.json(weekData);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.getPendingTasksToday = async (req, res) => {
   try {
     const userId = getUserFromToken(req);

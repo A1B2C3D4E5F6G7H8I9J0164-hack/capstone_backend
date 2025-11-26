@@ -27,6 +27,7 @@ router.delete("/schedules/:id", dashboardController.deleteSchedule);
 // Task routes
 router.get("/tasks", dashboardController.getTasks);
 router.get("/tasks/pending-today", dashboardController.getPendingTasksToday);
+router.get("/tasks/week", dashboardController.getTasksByWeek);
 router.post("/tasks", dashboardController.createTask);
 router.put("/tasks/:id", dashboardController.updateTask);
 router.delete("/tasks/:id", dashboardController.deleteTask);

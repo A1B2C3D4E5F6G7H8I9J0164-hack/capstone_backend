@@ -10,6 +10,7 @@ const passport = require("passport");
 require("./config/passport");
 const authRoutes = require("./routes/auth");
 const dashboardRoutes = require("./routes/dashboard");
+const aiRoutes = require("./routes/ai");
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use(passport.session());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/ai", aiRoutes);
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
