@@ -3,6 +3,7 @@ const Milestone = require("../models/Milestone");
 const Overview = require("../models/Overview");
 const Schedule = require("../models/Schedule");
 const Task = require("../models/Task");
+const Activity = require("../models/Activity");
 const jwt = require("jsonwebtoken");
 
 // Helper function to get user from token
@@ -16,6 +17,21 @@ const getUserFromToken = (req) => {
     return decoded.id;
   } catch (err) {
     return null;
+  }
+};
+
+// Helper function to log activity
+const logActivity = async (userId, type, description) => {
+  try {
+    await Activity.create({
+      userId,
+      type,
+      description,
+      date: new Date(),
+    });
+  } catch (err) {
+    console.error("Error logging activity:", err);
+    // Don't throw - activity logging shouldn't break the main flow
   }
 };
 
@@ -55,6 +71,9 @@ exports.updateStreak = async (req, res) => {
     user.maxStreak = newMaxStreak;
     user.lastActivityDate = today;
     await user.save();
+
+    // Log activity
+    await logActivity(userId, "streak_updated", `Streak updated: ${newCurrentStreak} days`);
 
     res.json({
       currentStreak: user.currentStreak,
@@ -124,6 +143,10 @@ exports.createMilestone = async (req, res) => {
     });
 
     await milestone.save();
+    
+    // Log activity
+    await logActivity(userId, "milestone_added", `Added milestone: ${title}`);
+    
     res.status(201).json(milestone);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -209,6 +232,10 @@ exports.createOverview = async (req, res) => {
     });
 
     await overview.save();
+    
+    // Log activity
+    await logActivity(userId, "overview_added", `Added overview: ${label}`);
+    
     res.status(201).json(overview);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -306,6 +333,10 @@ exports.createSchedule = async (req, res) => {
     });
 
     await schedule.save();
+    
+    // Log activity
+    await logActivity(userId, "schedule_added", `Added schedule: ${title}`);
+    
     res.status(201).json(schedule);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -353,6 +384,9 @@ exports.deleteSchedule = async (req, res) => {
       return res.status(404).json({ message: "Schedule not found" });
     }
 
+    // Log activity
+    await logActivity(userId, "schedule_deleted", `Deleted schedule: ${schedule.title}`);
+    
     res.json({ message: "Schedule deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -395,37 +429,66 @@ exports.getTasksByWeek = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Get tasks from the last 7 days
+    // Get activities from the last 7 days (tracks all user actions)
     const today = new Date();
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     sevenDaysAgo.setHours(0, 0, 0, 0);
 
+    // Get all activities from the last 7 days
+    const activities = await Activity.find({
+      userId,
+      date: { $gte: sevenDaysAgo },
+    }).sort({ date: 1 });
+
+    // Also get tasks for completed/pending counts
     const tasks = await Task.find({
       userId,
       dueDate: { $gte: sevenDaysAgo },
     }).sort({ dueDate: 1 });
 
-    // Group tasks by date
-    const tasksByDate = {};
-    tasks.forEach((task) => {
-      const taskDate = new Date(task.dueDate);
-      const dateKey = taskDate.toDateString();
+    // Group activities and tasks by date
+    const dataByDate = {};
+    
+    // Count activities per day
+    activities.forEach((activity) => {
+      const activityDate = new Date(activity.date);
+      const dateKey = new Date(activityDate.getFullYear(), activityDate.getMonth(), activityDate.getDate()).toDateString();
       
-      if (!tasksByDate[dateKey]) {
-        tasksByDate[dateKey] = {
+      if (!dataByDate[dateKey]) {
+        dataByDate[dateKey] = {
           date: dateKey,
           total: 0,
           completed: 0,
           pending: 0,
+          activities: 0,
         };
       }
       
-      tasksByDate[dateKey].total++;
+      dataByDate[dateKey].activities++;
+      dataByDate[dateKey].total++;
+    });
+
+    // Count tasks per day
+    tasks.forEach((task) => {
+      const taskDate = new Date(task.dueDate);
+      const dateKey = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate()).toDateString();
+      
+      if (!dataByDate[dateKey]) {
+        dataByDate[dateKey] = {
+          date: dateKey,
+          total: 0,
+          completed: 0,
+          pending: 0,
+          activities: 0,
+        };
+      }
+      
+      dataByDate[dateKey].total++;
       if (task.status === "completed") {
-        tasksByDate[dateKey].completed++;
+        dataByDate[dateKey].completed++;
       } else {
-        tasksByDate[dateKey].pending++;
+        dataByDate[dateKey].pending++;
       }
     });
 
@@ -439,11 +502,12 @@ exports.getTasksByWeek = async (req, res) => {
       date.setHours(0, 0, 0, 0);
       
       const dateKey = date.toDateString();
-      const dayData = tasksByDate[dateKey] || {
+      const dayData = dataByDate[dateKey] || {
         date: dateKey,
         total: 0,
         completed: 0,
         pending: 0,
+        activities: 0,
       };
       
       weekData.push({
@@ -452,6 +516,7 @@ exports.getTasksByWeek = async (req, res) => {
         total: dayData.total,
         completed: dayData.completed,
         pending: dayData.pending,
+        activities: dayData.activities,
         dateObj: date,
       });
     }
@@ -510,6 +575,10 @@ exports.createTask = async (req, res) => {
     });
 
     await task.save();
+    
+    // Log activity
+    await logActivity(userId, "task_created", `Created task: ${title}`);
+    
     res.status(201).json(task);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -531,6 +600,7 @@ exports.updateTask = async (req, res) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
+    const wasCompleted = task.status === "completed";
     if (title) task.title = title;
     if (description !== undefined) task.description = description;
     if (dueDate) task.dueDate = new Date(dueDate);
@@ -538,6 +608,12 @@ exports.updateTask = async (req, res) => {
     if (priority) task.priority = priority;
 
     await task.save();
+    
+    // Log activity if task was completed
+    if (status === "completed" && !wasCompleted) {
+      await logActivity(userId, "task_completed", `Completed task: ${task.title}`);
+    }
+    
     res.json(task);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -557,6 +633,9 @@ exports.deleteTask = async (req, res) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
+    // Log activity
+    await logActivity(userId, "task_deleted", `Deleted task: ${task.title}`);
+    
     res.json({ message: "Task deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });

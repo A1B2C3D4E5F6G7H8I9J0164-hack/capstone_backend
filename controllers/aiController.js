@@ -1,5 +1,6 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const jwt = require("jsonwebtoken");
+const Activity = require("../models/Activity");
 
 // Helper function to get user from token
 const getUserFromToken = (req) => {
@@ -78,6 +79,20 @@ ${notes}`;
     }
 
     console.log("Summary generated successfully, length:", summary.length);
+    
+    // Log activity
+    try {
+      await Activity.create({
+        userId,
+        type: "summary_generated",
+        description: `Generated summary from notes (${notes.length} chars)`,
+        date: new Date(),
+      });
+    } catch (activityErr) {
+      console.error("Error logging summary activity:", activityErr);
+      // Don't fail the request if activity logging fails
+    }
+    
     res.json({ summary: summary.trim() });
   } catch (err) {
     console.error("Gemini API Error:", err);
