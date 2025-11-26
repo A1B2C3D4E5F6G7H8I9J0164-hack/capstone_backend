@@ -1,34 +1,33 @@
-# OpenAI AI Integration Setup
+# Google Gemini AI Integration Setup
 
 ## Overview
-The AI summarization feature uses OpenAI's GPT-3.5-turbo model to generate intelligent summaries from user notes.
+The AI summarization feature uses Google's Gemini Pro model to generate intelligent summaries from user notes.
 
 ## Setup Instructions
 
-### 1. Get OpenAI API Key
-1. Go to [OpenAI Platform](https://platform.openai.com/)
-2. Sign up or log in to your account
-3. Navigate to API Keys section
-4. Create a new API key
-5. Copy the API key (you'll only see it once!)
+### 1. Get Gemini API Key
+1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click "Create API Key"
+4. Copy the API key (you can view it again later)
 
 ### 2. Add API Key to Environment Variables
 
 #### Local Development
 Add to your `.env` file in the backend directory:
 ```
-OPENAI_API_KEY=sk-your-api-key-here
+GEMINI_API_KEY=your-gemini-api-key-here
 ```
 
 #### Production Deployment
 Add the environment variable in your deployment platform (Render, Railway, Heroku, etc.):
-- Variable Name: `OPENAI_API_KEY`
-- Value: Your OpenAI API key
+- Variable Name: `GEMINI_API_KEY`
+- Value: Your Gemini API key
 
 ### 3. Install Dependencies
-The OpenAI package is already included in `package.json`. If you need to reinstall:
+The Google Generative AI package is already included in `package.json`. If you need to reinstall:
 ```bash
-npm install openai
+npm install @google/generative-ai
 ```
 
 ## Usage
@@ -60,29 +59,32 @@ Authorization: Bearer <your-token>
 
 ## Features
 
-- **Smart Summarization**: Uses GPT-3.5-turbo to understand context and generate meaningful summaries
+- **Smart Summarization**: Uses Gemini Pro to understand context and generate meaningful summaries
 - **Structured Output**: AI formats summaries with clear sections and bullet points
 - **Key Takeaways**: Extracts important insights from notes
 - **Error Handling**: Graceful fallback if API key is not configured
 
 ## Cost Considerations
 
-- GPT-3.5-turbo is cost-effective (~$0.0015 per 1K tokens)
-- Each summary uses approximately 500 tokens
+- Gemini Pro is free for most use cases (generous free tier)
+- Each summary uses approximately 500-1000 tokens
 - Consider implementing rate limiting for production use
+- Check [Google AI Studio pricing](https://ai.google.dev/pricing) for current rates
 
 ## Troubleshooting
 
 ### "AI service is not configured"
-- Make sure `OPENAI_API_KEY` is set in your environment variables
+- Make sure `GEMINI_API_KEY` is set in your environment variables
 - Restart your server after adding the environment variable
 
 ### "Invalid API key"
 - Verify your API key is correct
-- Check if your OpenAI account has credits/billing set up
+- Check if your Google account has API access enabled
+- Make sure you're using the correct API key from Google AI Studio
 
 ### Rate Limit Errors
-- OpenAI has rate limits based on your plan
+- Gemini has rate limits based on your usage
+- Free tier has generous limits but may throttle at high usage
 - Consider implementing request queuing or caching
 
 ## Security Notes

@@ -39,7 +39,7 @@ GOOGLE_REDIRECT_URL=your_google_redirect_url
 FRONTEND_URL=your_frontend_url (comma-separated for multiple)
 PORT=5001 (or your preferred port)
 SESSION_SECRET=your_session_secret (optional, defaults to JWT_SECRET)
-OPENAI_API_KEY=your_openai_api_key (required for AI summarization feature)
+GEMINI_API_KEY=your_gemini_api_key (required for AI summarization feature)
 ```
 
 ## API Endpoints Available
