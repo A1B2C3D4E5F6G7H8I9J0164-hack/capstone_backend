@@ -5,7 +5,6 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: false }, 
   googleId: { type: String, required: false, unique: true, sparse: true },
-  // Streak data
   currentStreak: { type: Number, default: 0 },
   maxStreak: { type: Number, default: 0 },
   lastActivityDate: { type: String, default: null },

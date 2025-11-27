@@ -20,12 +20,11 @@ const allowedOrigins = process.env.FRONTEND_URL
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(null, true); // Allow all origins for now - can restrict later
+      callback(null, true); 
     }
   },
   credentials: true,
@@ -50,12 +49,11 @@ app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/ai", aiRoutes);
 
-// Health check endpoint
+
 app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "Server is running" });
 });
 
-// 404 handler for API routes - must be after all API routes
 app.use((req, res, next) => {
   if (req.path.startsWith("/api/")) {
     return res.status(404).json({ message: "API endpoint not found" });

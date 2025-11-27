@@ -2,7 +2,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const jwt = require("jsonwebtoken");
 const Activity = require("../models/Activity");
 
-// Helper function to get user from token
+
 const getUserFromToken = (req) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return null;
@@ -16,7 +16,7 @@ const getUserFromToken = (req) => {
   }
 };
 
-// Initialize Gemini AI client
+
 let genAI = null;
 if (process.env.GEMINI_API_KEY) {
   genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -35,7 +35,7 @@ exports.summarizeNotes = async (req, res) => {
       return res.status(400).json({ message: "Notes are required" });
     }
 
-    // Check if Gemini API key is configured
+
     if (!process.env.GEMINI_API_KEY) {
       return res.status(503).json({ 
         message: "AI service is not configured. Please set GEMINI_API_KEY environment variable." 
@@ -47,17 +47,12 @@ exports.summarizeNotes = async (req, res) => {
         message: "AI service is not initialized. Please check your GEMINI_API_KEY configuration." 
       });
     }
-
-    // Get the Gemini model
-    // Default to a model that is available on the v1beta API used by @google/generative-ai 0.24.x
-    // You can override via GEMINI_MODEL env var (for example: gemini-1.5-flash or gemini-1.5-pro
-    // if your project / API version supports them)
     const modelName = process.env.GEMINI_MODEL || "gemini-1.0-pro-001";
     
     console.log("Using Gemini model:", modelName);
     const model = genAI.getGenerativeModel({ model: modelName });
 
-    // Create the prompt with clear instructions
+
     const prompt = `You are a helpful assistant that summarizes notes, lecture content, research snippets, and meeting notes. Create concise, well-structured summaries with key takeaways. Format your response with clear sections and bullet points where appropriate.
 
 Please summarize the following notes and extract the key insights:
@@ -68,7 +63,7 @@ ${notes}`;
     console.log("Model:", modelName);
     console.log("Notes length:", notes.length);
 
-    // Generate content - simple string format
+
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const summary = response.text();
@@ -82,7 +77,7 @@ ${notes}`;
 
     console.log("Summary generated successfully, length:", summary.length);
     
-    // Log activity
+
     try {
       await Activity.create({
         userId,
@@ -92,7 +87,7 @@ ${notes}`;
       });
     } catch (activityErr) {
       console.error("Error logging summary activity:", activityErr);
-      // Don't fail the request if activity logging fails
+
     }
     
     res.json({ summary: summary.trim() });
@@ -100,15 +95,15 @@ ${notes}`;
     console.error("Gemini API Error:", err);
     console.error("Error details:", JSON.stringify(err, null, 2));
     
-    // Handle Gemini API errors
+
     let errorMessage = "Failed to generate summary. Please try again.";
     let statusCode = 500;
 
-    // Check for Gemini-specific error structure
+
     if (err.message) {
       errorMessage = err.message;
       
-      // Check for common Gemini API errors
+
       if (err.message.includes("API_KEY")) {
         errorMessage = "Invalid Gemini API key. Please check your API key configuration.";
         statusCode = 401;
@@ -121,14 +116,14 @@ ${notes}`;
       }
     }
 
-    // Handle HTTP status codes if present
+
     if (err.statusCode) {
       statusCode = err.statusCode;
     } else if (err.status) {
       statusCode = err.status;
     }
 
-    // Handle response errors
+
     if (err.response) {
       const responseError = err.response;
       if (responseError.status) {

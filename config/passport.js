@@ -24,14 +24,12 @@ passport.use(
         });
 
         if (!user) {
-          // Create new user with Google email
           user = await User.create({
             name: profile.displayName,
             email: googleEmail,
             googleId: profile.id
           });
         } else {
-          // Update existing user to ensure email and googleId are current
           if (user.email !== googleEmail) {
             user.email = googleEmail;
           }
