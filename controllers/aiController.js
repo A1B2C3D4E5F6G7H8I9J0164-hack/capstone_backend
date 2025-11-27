@@ -22,6 +22,110 @@ if (process.env.GEMINI_API_KEY) {
   genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 }
 
+const generateQuizFromText = async (userId, text, questionCount = 5) => {
+  if (!text || !text.trim()) {
+    const error = new Error("Text is required to generate a quiz");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!process.env.GEMINI_API_KEY) {
+    const error = new Error(
+      "AI service is not configured. Please set GEMINI_API_KEY environment variable."
+    );
+    error.statusCode = 503;
+    throw error;
+  }
+
+  if (!genAI) {
+    const error = new Error(
+      "AI service is not initialized. Please check your GEMINI_API_KEY configuration."
+    );
+    error.statusCode = 503;
+    throw error;
+  }
+
+  const safeQuestionCount = Math.max(1, Math.min(Number(questionCount) || 5, 15));
+  const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = genAI.getGenerativeModel({ model: modelName });
+
+  const prompt = `You are an AI that generates multiple-choice quizzes from study notes.
+
+Generate ${safeQuestionCount} multiple-choice questions (MCQs) from the text below.
+
+Return ONLY valid JSON in the following format (no extra text):
+{
+  "questions": [
+    {
+      "question": "...",
+      "options": ["option A", "option B", "option C", "option D"],
+      "answerIndex": 0
+    }
+  ]
+}
+
+Rules:
+- Each question must have exactly 4 options.
+- answerIndex must be an integer from 0 to 3 pointing to the correct option.
+- Questions should cover key concepts, not trivial details.
+
+Text:
+${text}`;
+
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const raw = response.text();
+
+  if (!raw || !raw.trim()) {
+    const error = new Error("AI generated an empty quiz. Please try again.");
+    error.statusCode = 500;
+    throw error;
+  }
+
+  let payload;
+  try {
+    const cleaned = raw
+      .replace(/```json/gi, "")
+      .replace(/```/g, "")
+      .trim();
+    payload = JSON.parse(cleaned);
+  } catch (parseErr) {
+    console.error("Failed to parse quiz JSON:", parseErr);
+    console.error("Raw quiz response (first 400 chars):", raw.substring(0, 400));
+    const error = new Error("AI returned invalid quiz format. Please try again.");
+    error.statusCode = 500;
+    throw error;
+  }
+
+  if (!payload || !Array.isArray(payload.questions)) {
+    const error = new Error("AI response did not contain a valid questions array.");
+    error.statusCode = 500;
+    throw error;
+  }
+
+  const normalizedQuestions = payload.questions
+    .filter((q) => q && typeof q.question === "string" && Array.isArray(q.options))
+    .map((q) => {
+      const options = q.options.slice(0, 4).map((opt) => String(opt));
+      while (options.length < 4) {
+        options.push("");
+      }
+      let answerIndex = Number(q.answerIndex);
+      if (!Number.isInteger(answerIndex) || answerIndex < 0 || answerIndex > 3) {
+        answerIndex = 0;
+      }
+      return {
+        question: q.question,
+        options,
+        answerIndex,
+      };
+    });
+
+  return normalizedQuestions;
+};
+
+exports.generateQuizFromText = generateQuizFromText;
+
 exports.summarizeNotes = async (req, res) => {
   try {
     const userId = getUserFromToken(req);
@@ -149,98 +253,9 @@ exports.generateQuizFromNotes = async (req, res) => {
 
     const { text, questionCount = 5 } = req.body || {};
 
-    if (!text || !text.trim()) {
-      return res.status(400).json({ message: "Text is required to generate a quiz" });
-    }
+    const questions = await generateQuizFromText(userId, text, questionCount);
 
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(503).json({
-        message: "AI service is not configured. Please set GEMINI_API_KEY environment variable.",
-      });
-    }
-
-    if (!genAI) {
-      return res.status(503).json({
-        message: "AI service is not initialized. Please check your GEMINI_API_KEY configuration.",
-      });
-    }
-
-    const safeQuestionCount = Math.max(1, Math.min(Number(questionCount) || 5, 15));
-    const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-    const model = genAI.getGenerativeModel({ model: modelName });
-
-    const prompt = `You are an AI that generates multiple-choice quizzes from study notes.
-
-Generate ${safeQuestionCount} multiple-choice questions (MCQs) from the text below.
-
-Return ONLY valid JSON in the following format (no extra text):
-{
-  "questions": [
-    {
-      "question": "...",
-      "options": ["option A", "option B", "option C", "option D"],
-      "answerIndex": 0
-    }
-  ]
-}
-
-Rules:
-- Each question must have exactly 4 options.
-- answerIndex must be an integer from 0 to 3 pointing to the correct option.
-- Questions should cover key concepts, not trivial details.
-
-Text:
-${text}`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const raw = response.text();
-
-    if (!raw || !raw.trim()) {
-      return res.status(500).json({ message: "AI generated an empty quiz. Please try again." });
-    }
-
-    let payload;
-    try {
-      // Some models may wrap JSON in markdown fences; strip them.
-      const cleaned = raw
-        .replace(/```json/gi, "")
-        .replace(/```/g, "")
-        .trim();
-      payload = JSON.parse(cleaned);
-    } catch (parseErr) {
-      console.error("Failed to parse quiz JSON:", parseErr);
-      console.error("Raw quiz response (first 400 chars):", raw.substring(0, 400));
-      return res.status(500).json({
-        message: "AI returned invalid quiz format. Please try again.",
-      });
-    }
-
-    if (!payload || !Array.isArray(payload.questions)) {
-      return res.status(500).json({
-        message: "AI response did not contain a valid questions array.",
-      });
-    }
-
-    const normalizedQuestions = payload.questions
-      .filter((q) => q && typeof q.question === "string" && Array.isArray(q.options))
-      .map((q) => {
-        const options = q.options.slice(0, 4).map((opt) => String(opt));
-        while (options.length < 4) {
-          options.push("");
-        }
-        let answerIndex = Number(q.answerIndex);
-        if (!Number.isInteger(answerIndex) || answerIndex < 0 || answerIndex > 3) {
-          answerIndex = 0;
-        }
-        return {
-          question: q.question,
-          options,
-          answerIndex,
-        };
-      });
-
-    res.json({ questions: normalizedQuestions });
+    res.json({ questions });
   } catch (err) {
     console.error("Gemini quiz API Error:", err);
 

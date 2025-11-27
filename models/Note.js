@@ -26,6 +26,16 @@ const noteSchema = new mongoose.Schema(
         trim: true,
       },
     ],
+    quiz: {
+      questions: [
+        {
+          question: { type: String, required: true },
+          options: [{ type: String, required: true }],
+          answerIndex: { type: Number, required: true },
+        },
+      ],
+      lastGeneratedAt: { type: Date },
+    },
   },
   { timestamps: true }
 );
