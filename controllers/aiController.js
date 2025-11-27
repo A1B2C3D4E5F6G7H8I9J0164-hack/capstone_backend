@@ -48,9 +48,11 @@ exports.summarizeNotes = async (req, res) => {
       });
     }
 
-    // Get the Gemini model - updated default to a supported model
-    // You can override via GEMINI_MODEL env var
-    const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+    // Get the Gemini model
+    // Default to a model that is available on the v1beta API used by @google/generative-ai 0.24.x
+    // You can override via GEMINI_MODEL env var (for example: gemini-1.5-flash or gemini-1.5-pro
+    // if your project / API version supports them)
+    const modelName = process.env.GEMINI_MODEL || "gemini-1.0-pro-001";
     
     console.log("Using Gemini model:", modelName);
     const model = genAI.getGenerativeModel({ model: modelName });

@@ -32,5 +32,10 @@ router.post("/tasks", dashboardController.createTask);
 router.put("/tasks/:id", dashboardController.updateTask);
 router.delete("/tasks/:id", dashboardController.deleteTask);
 
+// Deep work routes
+router.get("/deepwork", dashboardController.getDeepWorkStats);
+router.post("/deepwork", dashboardController.updateDeepWorkSettings);
+router.post("/deepwork/session", dashboardController.logDeepWorkSession);
+
 module.exports = router;
 

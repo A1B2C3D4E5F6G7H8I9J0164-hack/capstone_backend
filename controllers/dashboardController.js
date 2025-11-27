@@ -4,6 +4,7 @@ const Overview = require("../models/Overview");
 const Schedule = require("../models/Schedule");
 const Task = require("../models/Task");
 const Activity = require("../models/Activity");
+const DeepWork = require("../models/DeepWork");
 const jwt = require("jsonwebtoken");
 
 // Helper function to get user from token
@@ -79,6 +80,108 @@ exports.updateStreak = async (req, res) => {
       currentStreak: user.currentStreak,
       maxStreak: user.maxStreak,
       lastActivityDate: user.lastActivityDate,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Deep work stats
+exports.getDeepWorkStats = async (req, res) => {
+  try {
+    const userId = getUserFromToken(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    let stats = await DeepWork.findOne({ userId });
+    if (!stats) {
+      stats = await DeepWork.create({ userId });
+    }
+
+    const averageMinutes = stats.sessionCount > 0
+      ? Math.round(stats.totalFocusMinutes / stats.sessionCount)
+      : 0;
+
+    res.json({
+      dailyGoalMinutes: stats.dailyGoalMinutes,
+      totalFocusMinutes: stats.totalFocusMinutes,
+      sessionCount: stats.sessionCount,
+      averageMinutes,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.updateDeepWorkSettings = async (req, res) => {
+  try {
+    const userId = getUserFromToken(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { dailyGoalMinutes } = req.body;
+
+    let stats = await DeepWork.findOne({ userId });
+    if (!stats) {
+      stats = new DeepWork({ userId });
+    }
+
+    if (typeof dailyGoalMinutes === "number" && !Number.isNaN(dailyGoalMinutes)) {
+      stats.dailyGoalMinutes = Math.max(15, Math.min(dailyGoalMinutes, 720));
+    }
+
+    await stats.save();
+
+    const averageMinutes = stats.sessionCount > 0
+      ? Math.round(stats.totalFocusMinutes / stats.sessionCount)
+      : 0;
+
+    res.json({
+      dailyGoalMinutes: stats.dailyGoalMinutes,
+      totalFocusMinutes: stats.totalFocusMinutes,
+      sessionCount: stats.sessionCount,
+      averageMinutes,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.logDeepWorkSession = async (req, res) => {
+  try {
+    const userId = getUserFromToken(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { minutes } = req.body;
+    const sessionMinutes = Number(minutes) || 0;
+    if (sessionMinutes <= 0) {
+      return res.status(400).json({ message: "Session minutes must be positive" });
+    }
+
+    let stats = await DeepWork.findOne({ userId });
+    if (!stats) {
+      stats = new DeepWork({ userId });
+    }
+
+    stats.totalFocusMinutes += sessionMinutes;
+    stats.sessionCount += 1;
+    await stats.save();
+
+    await logActivity(userId, "deepwork_session", `Deep work session: ${sessionMinutes} minutes`);
+
+    const averageMinutes = stats.sessionCount > 0
+      ? Math.round(stats.totalFocusMinutes / stats.sessionCount)
+      : 0;
+
+    res.status(201).json({
+      dailyGoalMinutes: stats.dailyGoalMinutes,
+      totalFocusMinutes: stats.totalFocusMinutes,
+      sessionCount: stats.sessionCount,
+      averageMinutes,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
