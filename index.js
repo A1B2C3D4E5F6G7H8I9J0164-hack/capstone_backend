@@ -11,6 +11,7 @@ require("./config/passport");
 const authRoutes = require("./routes/auth");
 const dashboardRoutes = require("./routes/dashboard");
 const aiRoutes = require("./routes/ai");
+const notesRoutes = require("./routes/notes");
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use(passport.session());
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/notes", notesRoutes);
 
 
 app.get("/health", (req, res) => {
@@ -72,4 +74,5 @@ app.listen(PORT, () => {
   console.log("  - /api/auth");
   console.log("  - /api/dashboard");
   console.log("  - /api/ai");
+  console.log("  - /api/notes");
 });

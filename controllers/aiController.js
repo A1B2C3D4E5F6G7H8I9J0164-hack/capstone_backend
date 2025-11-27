@@ -139,3 +139,138 @@ ${notes}`;
     });
   }
 };
+
+exports.generateQuizFromNotes = async (req, res) => {
+  try {
+    const userId = getUserFromToken(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { text, questionCount = 5 } = req.body || {};
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({ message: "Text is required to generate a quiz" });
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(503).json({
+        message: "AI service is not configured. Please set GEMINI_API_KEY environment variable.",
+      });
+    }
+
+    if (!genAI) {
+      return res.status(503).json({
+        message: "AI service is not initialized. Please check your GEMINI_API_KEY configuration.",
+      });
+    }
+
+    const safeQuestionCount = Math.max(1, Math.min(Number(questionCount) || 5, 15));
+    const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const model = genAI.getGenerativeModel({ model: modelName });
+
+    const prompt = `You are an AI that generates multiple-choice quizzes from study notes.
+
+Generate ${safeQuestionCount} multiple-choice questions (MCQs) from the text below.
+
+Return ONLY valid JSON in the following format (no extra text):
+{
+  "questions": [
+    {
+      "question": "...",
+      "options": ["option A", "option B", "option C", "option D"],
+      "answerIndex": 0
+    }
+  ]
+}
+
+Rules:
+- Each question must have exactly 4 options.
+- answerIndex must be an integer from 0 to 3 pointing to the correct option.
+- Questions should cover key concepts, not trivial details.
+
+Text:
+${text}`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const raw = response.text();
+
+    if (!raw || !raw.trim()) {
+      return res.status(500).json({ message: "AI generated an empty quiz. Please try again." });
+    }
+
+    let payload;
+    try {
+      // Some models may wrap JSON in markdown fences; strip them.
+      const cleaned = raw
+        .replace(/```json/gi, "")
+        .replace(/```/g, "")
+        .trim();
+      payload = JSON.parse(cleaned);
+    } catch (parseErr) {
+      console.error("Failed to parse quiz JSON:", parseErr);
+      console.error("Raw quiz response (first 400 chars):", raw.substring(0, 400));
+      return res.status(500).json({
+        message: "AI returned invalid quiz format. Please try again.",
+      });
+    }
+
+    if (!payload || !Array.isArray(payload.questions)) {
+      return res.status(500).json({
+        message: "AI response did not contain a valid questions array.",
+      });
+    }
+
+    const normalizedQuestions = payload.questions
+      .filter((q) => q && typeof q.question === "string" && Array.isArray(q.options))
+      .map((q) => {
+        const options = q.options.slice(0, 4).map((opt) => String(opt));
+        while (options.length < 4) {
+          options.push("");
+        }
+        let answerIndex = Number(q.answerIndex);
+        if (!Number.isInteger(answerIndex) || answerIndex < 0 || answerIndex > 3) {
+          answerIndex = 0;
+        }
+        return {
+          question: q.question,
+          options,
+          answerIndex,
+        };
+      });
+
+    res.json({ questions: normalizedQuestions });
+  } catch (err) {
+    console.error("Gemini quiz API Error:", err);
+
+    let errorMessage = "Failed to generate quiz. Please try again.";
+    let statusCode = 500;
+
+    if (err.message) {
+      errorMessage = err.message;
+      if (err.message.includes("API_KEY")) {
+        errorMessage = "Invalid Gemini API key. Please check your API key configuration.";
+        statusCode = 401;
+      } else if (err.message.includes("quota") || err.message.includes("rate limit")) {
+        errorMessage = "Rate limit exceeded. Please try again later.";
+        statusCode = 429;
+      } else if (err.message.includes("safety") || err.message.includes("blocked")) {
+        errorMessage = "Content was blocked by safety filters. Please try with different content.";
+        statusCode = 400;
+      }
+    }
+
+    if (err.statusCode) {
+      statusCode = err.statusCode;
+    } else if (err.status) {
+      statusCode = err.status;
+    }
+
+    if (err.response && err.response.data && err.response.data.error) {
+      errorMessage = err.response.data.error.message || errorMessage;
+    }
+
+    return res.status(statusCode).json({ message: errorMessage });
+  }
+};
