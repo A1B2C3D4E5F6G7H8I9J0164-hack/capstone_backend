@@ -47,7 +47,7 @@ exports.summarizeNotes = async (req, res) => {
         message: "AI service is not initialized. Please check your GEMINI_API_KEY configuration." 
       });
     }
-    const modelName = process.env.GEMINI_MODEL || "gemini-1.0-pro-001";
+    const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
     
     console.log("Using Gemini model:", modelName);
     const model = genAI.getGenerativeModel({ model: modelName });
