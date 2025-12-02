@@ -2,7 +2,6 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const jwt = require("jsonwebtoken");
 const Activity = require("../models/Activity");
 
-
 const getUserFromToken = (req) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return null;
@@ -191,7 +190,6 @@ ${notes}`;
       });
     } catch (activityErr) {
       console.error("Error logging summary activity:", activityErr);
-
     }
     
     res.json({ summary: summary.trim() });
@@ -199,15 +197,12 @@ ${notes}`;
     console.error("Gemini API Error:", err);
     console.error("Error details:", JSON.stringify(err, null, 2));
     
-
     let errorMessage = "Failed to generate summary. Please try again.";
     let statusCode = 500;
-
 
     if (err.message) {
       errorMessage = err.message;
       
-
       if (err.message.includes("API_KEY")) {
         errorMessage = "Invalid Gemini API key. Please check your API key configuration.";
         statusCode = 401;
@@ -220,13 +215,11 @@ ${notes}`;
       }
     }
 
-
     if (err.statusCode) {
       statusCode = err.statusCode;
     } else if (err.status) {
       statusCode = err.status;
     }
-
 
     if (err.response) {
       const responseError = err.response;

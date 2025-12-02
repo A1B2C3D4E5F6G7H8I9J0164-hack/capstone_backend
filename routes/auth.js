@@ -9,7 +9,6 @@ const router = express.Router();
 router.post("/signup", async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    console.log(name)
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(400).json({ message: "User already exists" });
@@ -32,7 +31,6 @@ router.post("/login", async (req, res) => {
     if (!user)
       return res.status(400).json({ message: "Invalid credentials" });
 
-
     if (!user.password)
       return res.status(400).json({ message: "Please use Google to sign in" });
 
@@ -53,7 +51,6 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Get current authenticated user
 router.get("/me", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;

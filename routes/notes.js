@@ -99,7 +99,6 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Generate or fetch cached quiz for a specific note
 router.post("/:id/quiz", async (req, res) => {
   try {
     const userId = getUserFromToken(req);

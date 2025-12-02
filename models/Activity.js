@@ -24,7 +24,6 @@ const activitySchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Index for efficient queries
 activitySchema.index({ userId: 1, date: -1 });
 activitySchema.index({ userId: 1, date: 1 });
 

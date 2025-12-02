@@ -7,7 +7,6 @@ const Activity = require("../models/Activity");
 const DeepWork = require("../models/DeepWork");
 const jwt = require("jsonwebtoken");
 
-// Helper function to get user from token
 const getUserFromToken = (req) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return null;
@@ -21,7 +20,6 @@ const getUserFromToken = (req) => {
   }
 };
 
-// Helper function to log activity
 const logActivity = async (userId, type, description) => {
   try {
     await Activity.create({
@@ -32,11 +30,9 @@ const logActivity = async (userId, type, description) => {
     });
   } catch (err) {
     console.error("Error logging activity:", err);
-    // Don't throw - activity logging shouldn't break the main flow
   }
 };
 
-// Update streak when user opens/edits something
 exports.updateStreak = async (req, res) => {
   try {
     const userId = getUserFromToken(req);
@@ -57,23 +53,19 @@ exports.updateStreak = async (req, res) => {
     let newCurrentStreak = user.currentStreak || 0;
     let newMaxStreak = user.maxStreak || 0;
 
-    // If no previous activity or last activity was yesterday, increment streak
     if (!user.lastActivityDate || user.lastActivityDate === yesterdayStr) {
       newCurrentStreak = (user.currentStreak || 0) + 1;
       newMaxStreak = newCurrentStreak > (user.maxStreak || 0) ? newCurrentStreak : (user.maxStreak || 0);
     } else if (user.lastActivityDate !== today) {
-      // If last activity was not today or yesterday, reset streak to 1
       newCurrentStreak = 1;
       newMaxStreak = newCurrentStreak > (user.maxStreak || 0) ? newCurrentStreak : (user.maxStreak || 0);
     }
-    // If last activity was today, don't increment (already counted)
 
     user.currentStreak = newCurrentStreak;
     user.maxStreak = newMaxStreak;
     user.lastActivityDate = today;
     await user.save();
 
-    // Log activity
     await logActivity(userId, "streak_updated", `Streak updated: ${newCurrentStreak} days`);
 
     res.json({
@@ -86,7 +78,6 @@ exports.updateStreak = async (req, res) => {
   }
 };
 
-// Deep work stats
 exports.getDeepWorkStats = async (req, res) => {
   try {
     const userId = getUserFromToken(req);
@@ -188,7 +179,6 @@ exports.logDeepWorkSession = async (req, res) => {
   }
 };
 
-// Get streak data
 exports.getStreak = async (req, res) => {
   try {
     const userId = getUserFromToken(req);
@@ -211,7 +201,6 @@ exports.getStreak = async (req, res) => {
   }
 };
 
-// Milestones CRUD
 exports.getMilestones = async (req, res) => {
   try {
     const userId = getUserFromToken(req);
@@ -247,7 +236,6 @@ exports.createMilestone = async (req, res) => {
 
     await milestone.save();
     
-    // Log activity
     await logActivity(userId, "milestone_added", `Added milestone: ${title}`);
     
     res.status(201).json(milestone);
@@ -301,7 +289,6 @@ exports.deleteMilestone = async (req, res) => {
   }
 };
 
-// Overview CRUD
 exports.getOverview = async (req, res) => {
   try {
     const userId = getUserFromToken(req);
@@ -336,7 +323,6 @@ exports.createOverview = async (req, res) => {
 
     await overview.save();
     
-    // Log activity
     await logActivity(userId, "overview_added", `Added overview: ${label}`);
     
     res.status(201).json(overview);
@@ -389,7 +375,6 @@ exports.deleteOverview = async (req, res) => {
   }
 };
 
-// Schedules CRUD
 exports.getSchedules = async (req, res) => {
   try {
     const userId = getUserFromToken(req);
@@ -437,7 +422,6 @@ exports.createSchedule = async (req, res) => {
 
     await schedule.save();
     
-    // Log activity
     await logActivity(userId, "schedule_added", `Added schedule: ${title}`);
     
     res.status(201).json(schedule);
@@ -487,7 +471,6 @@ exports.deleteSchedule = async (req, res) => {
       return res.status(404).json({ message: "Schedule not found" });
     }
 
-    // Log activity
     await logActivity(userId, "schedule_deleted", `Deleted schedule: ${schedule.title}`);
     
     res.json({ message: "Schedule deleted successfully" });
@@ -496,7 +479,6 @@ exports.deleteSchedule = async (req, res) => {
   }
 };
 
-// Tasks CRUD
 exports.getTasks = async (req, res) => {
   try {
     const userId = getUserFromToken(req);
@@ -532,28 +514,24 @@ exports.getTasksByWeek = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Get activities from the last 7 days (tracks all user actions)
     const today = new Date();
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     sevenDaysAgo.setHours(0, 0, 0, 0);
 
-    // Get all activities from the last 7 days
     const activities = await Activity.find({
       userId,
       date: { $gte: sevenDaysAgo },
     }).sort({ date: 1 });
 
-    // Also get tasks for completed/pending counts
+
     const tasks = await Task.find({
       userId,
       dueDate: { $gte: sevenDaysAgo },
     }).sort({ dueDate: 1 });
 
-    // Group activities and tasks by date
     const dataByDate = {};
     
-    // Count activities per day
     activities.forEach((activity) => {
       const activityDate = new Date(activity.date);
       const dateKey = new Date(activityDate.getFullYear(), activityDate.getMonth(), activityDate.getDate()).toDateString();
@@ -572,7 +550,6 @@ exports.getTasksByWeek = async (req, res) => {
       dataByDate[dateKey].total++;
     });
 
-    // Count tasks per day
     tasks.forEach((task) => {
       const taskDate = new Date(task.dueDate);
       const dateKey = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate()).toDateString();
@@ -595,7 +572,6 @@ exports.getTasksByWeek = async (req, res) => {
       }
     });
 
-    // Get last 7 days with their data
     const weekData = [];
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     
@@ -679,7 +655,6 @@ exports.createTask = async (req, res) => {
 
     await task.save();
     
-    // Log activity
     await logActivity(userId, "task_created", `Created task: ${title}`);
     
     res.status(201).json(task);
@@ -712,7 +687,6 @@ exports.updateTask = async (req, res) => {
 
     await task.save();
     
-    // Log activity if task was completed
     if (status === "completed" && !wasCompleted) {
       await logActivity(userId, "task_completed", `Completed task: ${task.title}`);
     }
@@ -736,7 +710,6 @@ exports.deleteTask = async (req, res) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    // Log activity
     await logActivity(userId, "task_deleted", `Deleted task: ${task.title}`);
     
     res.json({ message: "Task deleted successfully" });
