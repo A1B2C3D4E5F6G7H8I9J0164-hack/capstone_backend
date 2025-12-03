@@ -14,7 +14,6 @@ const aiRoutes = require("./routes/ai");
 const notesRoutes = require("./routes/notes");
 
 const app = express();
-
 const allowedOrigins = process.env.FRONTEND_URL 
   ? process.env.FRONTEND_URL.split(",").map(url => url.trim())
   : ["https://capstone-sem-3.vercel.app", "http://localhost:3000"];
