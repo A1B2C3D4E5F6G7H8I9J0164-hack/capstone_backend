@@ -53,7 +53,7 @@ app.use("/api/notes", notesRoutes);
 
 
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", message: "Server is running" });
+  res.json({ status: "ok", message: "Server is running", timestamp: new Date().toISOString() });
 });
 
 app.get("/debug", (req, res) => {
