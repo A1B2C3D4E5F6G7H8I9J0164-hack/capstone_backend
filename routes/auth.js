@@ -91,10 +91,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           expiresIn: "1h",
         });
 
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        const frontendUrl = "https://capstone-sem-3.vercel.app";
         res.redirect(`${frontendUrl}/Login?token=${token}&success=true`);
       } catch (err) {
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        const frontendUrl = "https://capstone-sem-3.vercel.app";
         res.redirect(`${frontendUrl}/Login?error=oauth_failed`);
       }
     }
