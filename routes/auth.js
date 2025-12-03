@@ -87,13 +87,16 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     passport.authenticate("google", { session: false, failureRedirect: "/login" }),
     async (req, res) => {
       try {
+        console.log("Google OAuth callback - user:", req.user);
         const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, {
           expiresIn: "1h",
         });
 
         const frontendUrl = "https://capstone-sem-3.vercel.app";
+        console.log("Redirecting to:", `${frontendUrl}/Login?token=${token}&success=true`);
         res.redirect(`${frontendUrl}/Login?token=${token}&success=true`);
       } catch (err) {
+        console.error("OAuth callback error:", err);
         const frontendUrl = "https://capstone-sem-3.vercel.app";
         res.redirect(`${frontendUrl}/Login?error=oauth_failed`);
       }
