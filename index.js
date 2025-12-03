@@ -56,6 +56,16 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "Server is running" });
 });
 
+app.get("/debug-env", (req, res) => {
+  res.json({
+    frontendUrl: process.env.FRONTEND_URL,
+    googleRedirectUrl: process.env.GOOGLE_REDIRECT_URL,
+    hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
+    hasGoogleClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+    nodeEnv: process.env.NODE_ENV
+  });
+});
+
 app.use((req, res, next) => {
   if (req.path.startsWith("/api/")) {
     return res.status(404).json({ message: "API endpoint not found" });
